@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>The Ultimate Chat</title>
+	<style type="text/css">
+	* { font-size: 18px; }
+	body {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		margin: 0;
+	}
+	#box {
+		position: absolute;
+		left: 10px;
+		right: 10px;
+		top: 10px;
+		bottom: 40px;
+		border: 1px solid #cccccc;
+		font-family: "Trebuchet MS", serif, arial;
+		overflow-y: auto;
+	}
+	#box>p {
+		display: block;
+		position: relative;
+		box-sizing: border-box;
+		width: 100%;
+		margin: 0;
+		padding-right: 50px;
+		word-wrap: break-word;
+	}
+	p.c { text-align: center; }
+	p.r { text-align: right; }
+	p>span {
+		float: right;
+		margin-right: -50px;
+	}
+	#type {
+		position: absolute;
+		box-sizing: border-box;
+		width: calc(100% - 20px);
+		left: 10px;
+		right: 10px;
+		bottom: 10px;
+	}
+	#note {
+		position: absolute;
+		left: 50%;
+		top: 10px;
+		width: 50%;
+		height: 50px;
+		margin-left: -25%;
+		opacity: 0;
+		background-color: rgba(255,255,255,0.8);
+		display: none;
+		transition: opacity 400ms;
+	}
+	#note.shown {
+		display: block;
+		opacity: 1;
+	}
+	</style>
+</head>
+<body>
+	<div id="box"></div>
+	<div id="note"></div>
+	<input id="type" readonly="readonly" maxlength="255" type="text" placeholder="Connecting..." autocomplete="off" autofocus="on" />
+	<script type="text/javascript">
+	"use strict";
+	window.WebSocket = window.WebSocket || window.MozWebSocket || alert("Sorry, but your browser does not support WebSocket.");
+	var ws = new WebSocket("ws://172.16.11.31:2016",'chat'), me = '', speaker = '', t = '', myIndex = 0, myMsg = [];
+	ws.onopen = function(){
+		type.readOnly = false;
+		type.placeholder = "Choose Name";
+	}
+	ws.onerror = function(e){
+		type.readOnly = true;
+		type.placeholder = "Error while connecting to server";
+		console.log(e);
+	}
+	ws.onmessage = function(msg){
+		try { var json = JSON.parse(msg.data); } catch (e) {
+      console.log('Invalid JSON: ', msg.data);
+      return;
+    }
+    if(json.type == "init"){
+    	me = json.text;
+    	type.placeholder="Press Enter to send";
+    	type.readOnly=false;
+    	type.focus();
+    }
+    else if(json.type == "end"){display(json);ws.close();type.value='';type.placeholder = "Kicked.";}
+    else if(json.type == "msg"||json.type == "me"||json.type == "cmd"){display(json);type.readOnly=false;}
+    else if(json.type == "history")for(var i=0,l=json.text.length;i<l;i++)display(json.text[i]);
+    else if(json.type == "error"){
+    	display({type:"cmd",from:'server',text:json.text});
+    	type.readOnly = false;
+    }
+    else console.log("What is this?",json);
+	}
+	type.addEventListener('keydown',function(e){
+		if(e.keyCode==13){
+			if(!me&&this.value.match(/\s/)){
+				this.value = '';
+				this.placeholder = 'Your name cannot contain space characters.'
+			}
+			if(!this.value){e.preventDefault();return false;}
+			ws.send(this.value);
+			myIndex = myMsg.push(this.value) - 1;
+			if(myMsg.length>100){myMsg.shift();myIndex--;}
+			type.focus();
+			this.readOnly = true;
+			this.value='';
+		}else if(e.keyCode==27)this.value='';
+		else if(e.keyCode==38){
+			this.value = myMsg[myIndex];
+			if(myIndex>0)myIndex--;
+		}else if(e.keyCode==40){
+			if(myIndex<myMsg.length-1)myIndex++;
+			this.value = myMsg[myIndex];
+		}
+	});
+	document.addEventListener('beforeunload',function(e){
+		ws.close();
+	});
+	function notify(obj){
+		note.innerHTML = obj.text;
+		note.className = 'shown';
+		setTimeout(function(){note.className = ''}, 5000);
+	}
+	function display(obj){
+		var p = document.createElement('p');
+    if(obj.type == "me"){
+    	p.className = "c";
+    	p.innerHTML = '* ' + obj.from + ' ' + obj.text + ' *';
+    	t = '';
+    }else if(obj.type == "cmd"||obj.type == "end"){
+  		p.innerHTML = 'Server: '+ obj.text;
+  		speaker = 'server';
+  	}else{ // msg goes into here
+			obj.from == me ? p.className = 'r' : p.innerHTML = obj.from + ': ';
+    	p.innerHTML += obj.text;
+  	}
+  	if(speaker != obj.from){
+    	speaker = obj.from;
+    	t = '';
+    }
+    if(t != (new Date(obj.time)).toString().match(/\d\d:\d\d/)[0]) {
+    	t = (new Date(obj.time)).toString().match(/\d\d:\d\d/)[0]; // screw efficiency.
+			p.innerHTML += ' <span>'+t+'</span>';
+    }
+   	box.appendChild(p);
+   	box.scrollTop = box.scrollHeight;
+	}
+	</script>
+</body>
+</html>

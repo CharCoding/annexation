@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Annexation</title>
+	<meta charset="UTF-8" />
+	<script type="text/javascript" src="splashes.js" defer="defer"></script>
+	<!--link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css' /-->
+	<style type="text/css">
+	.h { color: #424242; background-color: #e9e9e9; }
+	.b { color: #012345; background-color: rgba(255,255,255,0.9); }
+	.yes, .no {  color: #ffffff; border-radius: 5px; transition: background 200ms; }
+	.yes { background-color: #3299BB; }
+	.yes:hover { background-color: #42a9cb; }
+	.yes:active { background-color: #2289ab; }
+	.no { background-color: #ff9900; }
+	.no:hover { background-color: #ffa910; }
+	.no:active { background-color: #ef8900; }
+	*[hidden] { display: none; }
+
+	* { box-sizing: border-box; margin: 0; font-family: Raleway, "Trebuchet MS", Arial; }
+	body, #start{ position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow:hidden; }
+	#start { text-align: center; vertical-align: middle; }
+	#start input[type="button"]{ width: 90px; }
+	#annexation { color: #ef3f1f; display: inline-block; margin-top: 100px; }
+	#annexation::before { content:"Λnne"; color: black; }
+	#annexation::after { content:"atıøn"; color: black; }
+	button, input[type="button"] {border-radius:none;}
+	#splash {
+		position: absolute;
+		left: 50%;
+		top: 100px;
+		margin-left: -320px;
+		width: 350px;
+		overflow: visible;
+		text-align: center;
+		white-space: nowrap;
+		transform: scale(0.8,0.8) rotate(-20deg);
+		animation: zoom 800ms linear 0s infinite alternate;
+	}
+	@keyframes zoom{0%{transform:scale(0.8,0.8)rotate(-20deg);}100%{transform:scale(1,1)rotate(-20deg);}}
+	#map {
+		position: absolute;
+		left: 0;
+		top: 0;
+		padding: 10px 1px;
+		width: 2552px;
+		z-index: 5;
+		overflow: visible;
+		transform-origin: 50% 50%;
+	}
+	#gui {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 8;
+	}
+	h2 { margin: 10px 0; }
+	#msg {
+		z-index: 9;
+  	position: fixed;
+  	left: 50%;
+  	top:50%;
+  	width: 400px;
+  	height: auto;
+  	opacity: 1;
+  	margin-top: -100px;
+  	margin-left: -200px;
+  	overflow: hidden;
+  	padding: 0 10px;
+  	transition: margin-top 400ms, opacity 400ms;
+	}
+	#msg.hidden { opacity: 0; margin-top: 0; }
+	#msg input {
+  	position: relative;
+		float: right;
+		display: inline-block;
+  	padding: 2px;
+  	bottom:75%;
+  	border: none;
+  	border-radius: 2px;
+	}
+	#msg input:hover { color: #2f4fff; }
+	#msg input:active { color: #eeeeee; }
+	/*
+	body > div {
+		position: absolute;
+		z-index:10;
+	}
+	#left,#right,#top,#bottom{width: auto;height: auto;}
+	#left,#right{top:0;bottom:0;width:12px;}
+	#left{left:0;}#right{right:0;}
+	#top,#bottom{left:12px;right:12px;height:12px;}
+	#top{top:0;}#bottom{bottom:0;}
+	#left:hover ~ #map{left:250%;top:50%;transition: left 10s, top 5s;}
+	#right:hover ~ #map{left:-150%;top:50%;transition: left 10s, top 5s;}
+	#top:hover ~ #map{top: 250%;left:50%;transition: left 10s, top 5s;}
+	#bottom:hover ~ #map{top:-150%;left:50%;transition: left 10s, top 5s;}
+	*/
+	#players, #players-append {
+		position: absolute;
+		display: inline-block;
+		left: 0;
+		bottom: 0;
+		border: 1px solid black;
+		border-spacing: 0;
+		border-collapse: collapse;
+	}
+	#players-append {}
+	#players th {
+		border-bottom: 1px solid black;
+		border-left: 1px solid black;
+	}
+	#players th, #players td { margin: 0; }
+	#players tr:nth-child(2n) {
+		background-color: rgba(240,240,240,0.8);
+	}
+	.player.self {
+		font-weight: bold;
+		background-color: rgba(255,255,255,0.9);
+	}
+	.locate {
+		width: 20px;
+		height: 20px;
+		display: inline-block;
+		position: relative;
+		float: right;
+		transform: rotate(45deg);
+		border-radius: 10px;
+		border-bottom-right-radius: 0;
+		box-shadow: inset 0 0 0 8px #000;
+	}
+	.locate:hover { opacity: 1; }
+	#gui button {
+		
+		position: relative;
+		display: inline-block;
+		float: left;
+		margin: 0;
+		vertical-align: bottom;
+	}
+	#moneyCount::before { content: "Money: "; }
+	#cityCount::before { content: "Cities: "; }
+	#colonyCount::before { content: "Colonies: "; }
+	#oceanCount::before { content: "Ocean Territories: "; }
+	#armyCount::before { content: "Army: "; }
+	#navyCount::before { content: "Navy: "; }
+	#airForceCount::before { content: "Airforce: "; }
+	#militaryValue::before { content: "Military Value: "; }
+	#alliances::before { content: "Alliances: "; }
+	#enemies::before { content: "Enemies: "; }
+	#neutral::before { content: "Neutral: "; }
+	#battleHistory::before { content: "Previous Battles: "; }
+
+	i { transform: scale(0.8,0.8); }
+#map>div {
+  position: relative;
+  display: inline-block;
+  float: left;
+  width: 60px; 
+  height: 34.64px;
+  margin: 8px 0;
+  border-left: solid 1px rgba(35,35,35,0.8);
+  border-right: solid 1px rgba(35,35,35,0.8);
+  opacity: 1;
+  transition: opacity 400ms;
+}
+#map>div:nth-child(84n+43){margin-left:30px;}
+#map>div:before,#map>div:after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  width: 42.43px;
+  height: 42.43px;
+  -webkit-transform: scaleY(0.5774) rotate(-45deg);
+  -ms-transform: scaleY(0.5774) rotate(-45deg);
+  transform: scaleY(0.5774) rotate(-45deg);
+  background-color: inherit;
+  left: 7.7868px;
+}
+#map>div:before {
+  top: -21.2132px;
+  border-top: solid 1.4142px rgba(35,35,35,0.8);
+  border-right: solid 1.4142px rgba(35,35,35,0.8);
+}
+#map>div:after {
+  bottom: -21.2132px;
+  border-bottom: solid 1.4142px #333333;
+  border-left: solid 1.4142px #333333;
+}
+
+.lnd { background-color: #3fcf3f; }
+.sea { background-color: #2080f0; }
+.mtn { background-color: #7f7f7f; }
+#map>div:focus { border-color: #ffffff; outline: none; z-index: 2; }
+#map>div:focus::before, #map>div:focus::after { border-color: #ffffff; }
+	</style>
+</head>
+<body>
+	<div id="start" style="display:none;">
+		<h1 id="annexation">[x]</h1> <span>v6.0</span><br />
+		<span id="splash" onclick="newSplash();"></span>
+		<input type="text" id="gameInit" value="" placeholder="Please paste in the game initialization code here." size="80" autocomplete="off" autofocus="on" style="margin-top:100px;" />
+		<select id="playerList" autocomplete="off"><option selected="selected" disabled="disabled">Select your name</option></select><br />
+		<input type="button" value="Play" disabled="disabled" autocomplete="off" id="playButton" /><br />
+		<a href="manual.html" target="_blank" style="text-decoration:none;"><input type="button" value="Manual" id="gameManual" /></a><br /><input type="checkbox" id="bigHeadMode" autocomplete="off" /><label for="bigHeadMode">Experimental Features</label>
+		<div style="position:absolute;left:0;right:0;bottom:0;text-align:center;display:none;">Anne[x]ation&reg; by CharCoding Co. ltd and Raptor Wombat Gaming Studios, 2016, All Rights Reserved</div>
+	</div>
+	<div id="left"></div><div id="right"></div><div id="top"></div><div id="bottom"></div>
+	<div id="map" class="no-border">
+		<!-- object (no interactivity)  <object type="image/svg+xml" data="penrose.svg#map" />  -->
+		<!-- If using external svg  <svg viewBox="0 0 6391 3339"> <use xlink:href="penrose.svg#map"></use> </svg>  -->
+		<!-- external svg as image<img src="penrose.svg" alt="World Map Penrose Tiling" />  -->
+		<!-- NOTE: Try using CSS transitions for map movements. (side controls, transitioning to left: 0 or right: 0) -->
+		<!-- Actual World Map <img src="http://image.disneycoloring.net/2015/12/07/world-map-coloring-page-l-2b04aac0f4dcc943.png" alt="World Map" /> -->
+	</div>
+	<div id="ctxmenu" hidden="hidden">
+		<ol style="list-type-style:none;">
+			<li>Purchase</li>
+			<li>Move</li>
+			<li>Select</li>
+		</ol>
+	</div>
+	<div id="gui" style="">
+		<table id="players">
+			<thead>
+				<tr>
+					<th>Players<i class="icono-sync"></i></th><th>$</th><th>City</th><th>Colony</th><th>Trade<br />routes</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>Anthony<i class="locate"></i></td><td>50</td><td>23</td><td>25</td><td>7</td>
+				</tr>
+				<tr>
+					<td>Charly<i class="locate"></i></td><td>47</td><td>22</td><td>23</td><td>8</td>
+				</tr>
+				<tr>
+					<td>Jacob<i class="locate"></i></td><td>49</td><td>23</td><td>26</td><td>3</td>
+				</tr>
+				<tr>
+					<td>Jamie<i class="locate"></i></td><td>48</td><td>23</td><td>24</td><td>5</td>
+				</tr>
+				<tr>
+					<td>North<i class="locate"></i></td><td>50</td><td>25</td><td>25</td><td>6</td>
+				</tr>
+				<tr>
+					<td>Rudolf<i class="locate"></i></td><td>49</td><td>24</td><td>26</td><td>4</td>
+				</tr>
+			</tbody>
+		</table>
+		<table id="players-append" style="display:none;">
+			<thead>
+				<tr>
+					<th>Controlled<br />Territories</th><th>Military<br />Value</th><th>Economy<br />Spending Limit</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>23</td><td>25</td><td>7</td>
+				</tr>
+				<tr>
+					<td>22</td><td>23</td><td>8</td>
+				</tr>
+				<tr>
+					<td>23</td><td>26</td><td>3</td>
+				</tr>
+				<tr>
+					<td>23</td><td>24</td><td>5</td>
+				</tr>
+				<tr>
+					<td>25</td><td>25</td><td>6</td>
+				</tr>
+				<tr>
+					<td>24</td><td>26</td><td>4</td>
+				</tr>
+			</tbody>
+		</table>
+		<button id="buyCity">+City</button>
+		<button id="buyColony">+Colony</button>
+		<button id="buyTrade">+Trade Route</button>
+		<button id="done">Done</button>
+	</div>
+	<div id="msg" class="hidden b"></div>
+	<script type="text/javascript">
+	// DATA
+	//var l = document.querySelectorAll("#bottomBar > li");
+	//for(var i=0;i<4;i++)l[i].setAttribute("onclick","javascript:void(0);");
+	var armyUnits = ["Infantry","Mechanized Infantry","Tank","Artillery"],
+	navyUnits = ["Submarine","Destroyer","Cruiser","Battleship","Aircraft Carrier"],
+	airUnits = ["Bomber","Fighter"],
+	unitList = armyUnits.concat(navyUnits,airUnits), //ai = false,
+	costs = {
+		"Infantry":2,
+		"Mechanized Infantry":4,
+		"Tank":4,
+		"Artillery":4,
+		"Submarine":3,
+		"Destroyer":4,
+		"Cruiser":4,
+		"Battleship":5,
+		"Aircraft Carrier":14,
+		"Bomber":7,
+		"Fighter":10,
+		"City":6,
+		"Trade Route":2,
+		"Colony":function(old,add){return add*(add/2+old+5.5);} // MAGIC
+	},
+	tiles = ["lnd","sea","mtn","dst","arc"];
+	Game = {
+		started:false,
+		players:[],
+		self:0,
+		round:0
+	};
+	var mapData = new Int16Array(756), chance = Math.random(); // 42*18=756
+	// 16 bits: 1 = colony/city, 4 = # of colony/city (0 - 15), 1 = trade node or not, 3 = tile type, 3 = ownership, 1 = capital or not, 3 = unused
+	var highest = 0;
+	for(var j=0;j<756;j++){
+		var tile = document.createElement('div');
+		tile.classList.add(tiles[Math.random()*3|0]);
+		tile.setAttribute('id','#'+j);
+		tile.setAttribute('tabindex',0);
+		map.appendChild(tile);
+	}
+	//map.innerHTML = mapData
+	// Game initialization GUI
+	gameInit.addEventListener('input',function(evt){
+		try{
+			Game.players=JSON.parse(this.value).map(function(e,i){
+				var n=document.createElement('option');n.value=i;n.innerHTML=e;playerList.appendChild(n);return e;
+			});
+		}catch(e){}
+	},false);
+	playerList.addEventListener('change',function(){
+		if(playerList.value!==undefined){playButton.disabled=false;Game.self=+playerList.value;}
+	},false);
+	playButton.addEventListener('click',function(){
+		start.style.display='none';
+		
+		Game.started = true;
+	},false);
+	function showMsg(h,c,b,f,t){
+		msg.innerHTML="<h2 class='h'>"+h+"</h2>"+c;
+		if(b){
+			var d = document.createElement("input");
+			d.className='yes';
+			d.value=b;
+			d.type="button";
+			d.addEventListener('click',f||hideMsg,false);
+			msg.appendChild(d);
+		}
+		msg.className="";
+		if(t)setTimeout(hideMsg,t);
+	}
+	function hideMsg(){ msg.className="hidden"; }
+	// Menu buttons GUI
+	
+	/* Stats page information:
+	Money - Cities - Colonies - Controlled ocean territories
+	Military Power ("Comprehensive Evaluation") (Army - Navy - Airforce) (interactive hovering for more information)
+	Alliance history - Battle history
+		Render page layout:
+	IF Game.self == Game.turn
+	Display "Complete turn" button
+	ELSE
+	Display <currentPlayer> + "'s turn data" and input box
+	*/
+	// Game Data and API
+	function initPlayerData(name,capital,cities,colonies,units){
+		var player = {};
+		player.name = name;
+		player.capital = capital;
+		player.cities = cities;
+		player.colonies = colonies;
+		player.units = units;
+		Object.defineProperties(player,{
+			"cityTotal":{get:function(){for(var i=0,t=0;i<cities.length;i++)t+=cities[i].amount;return t;}},
+			"colonyTotal":{get:function(){for(var i=0,t=0;i<colonies.length;i++)t+=colonies[i].amount;return t;}}
+		});
+		player.stats = {
+			battles:0,
+			territory:0,
+			military:0
+		}
+		Game.players.push(player);
+		return player;
+	}
+	
+	function purchaseCity(location,amount){
+		var cost = amount*6;
+		if(player.money<cost)showMsg("Error!","You need $"+cost-player.money+" more to make this purchase!","OK");
+		//map[location.x][location.y].cities.push(new City());
+	}
+	function purchaseColony(location,amount){
+		//var cost = map[location.x][location.y].colonies.length*
+	}
+	var zoom = 1;
+	document.addEventListener('wheel',function(e){
+		console.log((map.scrollLeft + e.pageX) + ' ' + (map.scrollTop + e.pageY));
+		map.style.transformOrigin=(map.scrollLeft+e.pageX)+'px '+(map.scrollTop+e.pageY)+'px';
+		zoom += e.deltaY / 5;
+		if(zoom < 0.5) zoom = 0.5;
+		else if (zoom > 5) zoom = 5;
+		console.log(map.style.transform="scale("+zoom+")");
+	},false);
+	map.addEventListener('click',function(e){
+		var o=+e.target.style.opacity;
+		if(!o)o=1;
+		e.target.style.opacity=o-0.1;
+		console.log(e.target);
+	});
+	map.addEventListener('contextmenu',function(e){
+		e.preventDefault();
+	});
+	/*
+	var Game = [
+		{
+			name:"Charly",
+			money:5,
+			capital:{x:3,y:2},
+			cities:[
+				{x:1,y:1,amount:4},
+				{x:3,y:2,amount:6},
+				{x:4,y:1,amount:2}
+			], // CAP: 90 cities
+			get cityTotal:function(){
+				var t = 0;
+				for(var i=0;i<cities.length;i++){
+					t+=cities[i].amount;
+				}
+				return t; // This is also the cap for economy spending
+			},
+			colonies:[
+				{x:2,y:1,amount:3},
+				{x:2,y:2,amount:2},
+				{x:2,y:4,amount:2},
+				{x:3,y:1,amount:1},
+				{x:3,y:3,amount:2},
+				{x:4,y:3,amount:1}
+			], // CAP 90
+			get colonyTotal:function(){
+				var t=0;
+				for(var i=0;i<colonies.length;i++){
+					t+=colonies[i].amount;
+				}
+				return t;
+			}
+			units:[
+				{x:1,y:1,tank:3,infantry:2,bomber:1},
+				{x:2,y:1,tank:1,infantry:1}
+			],
+		},
+		{
+			name:"Rudolf",
+			money:2,
+			capital:{x:15,y:7},
+		}
+	];
+	*/
+	function Player(name){
+		this.name = name;
+		this.id = playerList.length; // ID reference for tile ownership
+		this.$ = 0; // money
+		this.cities = 0; // only amount is needed. The rest is saved in mapData.
+		this.colonies = 0; 
+		this.nodes = 0;
+		this.units = [] // unit list starts empty
+		this.makeTreaty = function(){
+			treaty.style.display = 'block';
+		};
+		/*
+		this.signTreaty = function(name,opts){
+			var treaty = new Treaty(name,opts);
+			treaties.push(treaty);
+			return treaty;
+		} // wait for treaty mechanics settle
+		*/
+		this.gain = function(){ this.$ += this.cities*2+this.nodes; }
+		this.done = function(){} // send POST request to server
+		this.buy = function(type,amount,tileID){
+			if(costs[type]>this.$){return "Not enough $."}
+			if(type=="city"||type=="colony"){
+				if((mapData[tileID]>>>11&15)<15)mapData[tileID]+=2048; // 1<<11
+				else return "Reached building limit (15 per tile).";
+			}else if(type=="node"){
+				if((mapData[tileID]>>>10&1))return "Tile already contains trade node.";
+				else mapData[tileID]+=1024; // 1<<10
+			}
+		}
+		return this;
+	}
+	// var I = new Player("Charly"); // init
+	</script>
+</body>
+</html>
