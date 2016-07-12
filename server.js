@@ -6,7 +6,8 @@ var wsPort = new Date().getFullYear(),
 	fs = require('fs'),
 	history = [],
 	clients = [],
-	ips = ['192.168.1.104','172.16.11.31','127.0.0.1','localhost'],
+	ips = ['192.168.1.104','192.168.1.3','172.16.11.31','127.0.0.1','10.201.172.187','localhost'],
+	roles = ["user","moderator","admin"],
 	passwords = ['Crafters_21'],
 	esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'),
 	allowOrigin=o=>ips.indexOf(o.replace(/http[s]?:\/\//,'').replace(/:\d{4}$/,''))>=0;
@@ -36,7 +37,7 @@ wsServerInstance.on('request',function(req){
 	if (history.length > 0) con.sendUTF(JSON.stringify({type:'history',text:history}));
 	con.on('message',function(msg){
 		if(msg.type === 'utf8') {
-			var str = msg.utf8Data;
+			var str = esc(msg.utf8Data);
 			if(!username){
 				username = esc(str);
 				for(var i=0,l=clients.length;i<l;i++){
@@ -46,6 +47,7 @@ wsServerInstance.on('request',function(req){
 					}
 				}
 				con.username = username;
+				con.role = 0;
 				console.log(new Date + " " + username + " has joined the chat.");
 				con.sendUTF(JSON.stringify({type:"init",text:username}));
 				var obj = {
@@ -72,25 +74,42 @@ wsServerInstance.on('request',function(req){
 				var cmd = str.slice(1).split(' '), obj = {type:"cmd"};
 				switch(cmd[0]){
 					case 'op':
-						if(con.role == "admin"){
-							if(cmd[1]){
-								var target = search(cmd[1]);
-								if(target){
-									target.role = 'admin';
-									obj.text = "Admin access granted by " + username + " to " + target.username + ".";
-									broadcast(obj);
-								}else{
-									obj.text = "Unable to find " + cmd[1] + ".";
-								}
-							} else {
-								obj.text = "Please specify user to be granted admin access.";
+						if(con.role == 2){
+							var target = search(cmd[1]);
+							if(target){
+								target.role = cmd[2] || 1;
+								obj.text = cap(roles[target.role]) + " access granted by " + username + " to " + target.username + ".";
+								broadcast(obj);
+							}else{
+								obj.text = "Error: unable to find " + cmd[1] + ".";
+								broadcast(obj);
 							}
-						}
-						else if(passwords.indexOf(cmd[1])>=0){
-							con.role = "admin";
+							return;
+						}else if(passwords.indexOf(cmd[1])>=0){
+							con.role = 2;
 							obj.text = "Admin access granted for " + username + ".";
-						}else obj.text = "Admin access denied for" + username + ".";
+						}else obj.text = "Admin access denied for " + username + ".";
 						broadcast(obj);
+					break;
+					case 'deop':
+						var target = search(cmd[1]);
+						if(!target){
+							obj = time(obj);
+							obj.text = "Error: unable to find " + cmd[1] + ".";
+							send(con,obj);
+							return;
+						}else if(target.role >= con.role){
+							obj = time(obj);
+							obj.text = "Error: Insufficient permission";
+							send(con,obj);
+							obj.text = "Warning: " + con.username + " tried to de-op you.";
+							send(target,obj);
+							return;
+						}else{
+							obj.text = cap(roles[target.role]) + " access removed by " + username + " from " + target.username + ".";
+							target.role = "user";
+							broadcast(obj);
+						}
 					break;
 					case 'me':
 						obj.from = username;
@@ -99,32 +118,38 @@ wsServerInstance.on('request',function(req){
 						broadcast(obj);
 					break;
 					case 'kick':
-						var kicker = search(username), kickee = search(cmd[1]);
-						if(kicker.role == "admin"){
-							if(!kickee){
-								obj.time = (new Date).getTime();
-								obj.text = 'Error: user ' + cmd[1] + ' does not exist.';
-								kicker.sendUTF(JSON.stringify(obj));
-								return;
-							}
+						var target = search(cmd[1]);
+						if(!target){
+							obj = time(obj);
+							obj.text = 'Error: user ' + cmd[1] + ' does not exist.';
+							send(con,obj);
+							return;
+						}else if(target.role >= con.role){
+							obj = time(obj);
+							obj.text = 'Error: Insufficient permission.';
+							send(con,obj);
+							obj.text = 'Warning: ' + con.username + " tried to kick you.";
+							send(target,obj);
+							return;
+						}
+						if(con.role){
 							obj.from = "Server";
 							obj.type = "end";
-							obj.time = (new Date).getTime();
-							obj.text = kickee.username + ' was kicked by ' + username + ' because ' + cmd.slice(2).join(' ');
-							kickee.sendUTF(JSON.stringify(obj));
+							obj = time(obj);
+							obj.text = target.username + ' was kicked by ' + username;
+							if(cmd[2])obj.text += ' because ' + cmd.slice(2).join(' ') + "."; 
+							else obj.text += ".";
+							send(target,obj);
 							obj.type = "msg";
 							broadcast(obj);
 						}
 					break;
 					case 'report':
-						for(var i=0,l=clients.length,found=-1;i<l;i++){
-							if(clients[i].username == cmd[1]){
-								found = i;
-								break;
-							}
+						var reported = search(cmd[1]);
+						if(reported){
+							obj.text = cmd[1] + ' is reported for ' + cmd[2] + '. Type /yes to punish this user, or /no to cancel the report.';
+							broadcast(obj);
 						}
-						if(found>=0)obj.text = cmd[1] + ' is reported for ' + cmd[2] + '. Type /yes to punish this user, or /no to cancel the report.';
-						broadcast(obj);
 						break;
 					break;
 					case 'msg':
@@ -146,19 +171,31 @@ wsServerInstance.on('request',function(req){
 	});
 	con.on('close', function(con) {
     if (username !== false) {
+    	var obj = {type:"me",text:con.username + " has left.",from:con.username}
+    	broadcast(obj);
       console.log(new Date + " Peer "+ (con.remoteAddress||con.username) + " disconnected.");
       clients.splice(index, 1);
     }
   });
 });
 function broadcast(obj){
-	if(!obj.time)obj.time = (new Date).getTime();
+	obj = time(obj);
 	if(history.push(obj)>=100)history.shift();
-	for(var i=0,l=clients.length;i<l;i++)clients[i].sendUTF(JSON.stringify(obj));
+	for(var i=0,l=clients.length;i<l;i++)send(clients[i],obj);
 }
 function search(user){
 	for(var i=0,l=clients.length;i<l;i++){
 		if(clients[i].username == user)return clients[i];
 	}
 	return false;
+}
+function cap(str){
+	return str.slice(0,1).toUpperCase() + str.slice(1);
+}
+function time(obj){
+	obj.time = (new Date).getTime();
+	return obj;
+}
+function send(con,obj){
+	con.sendUTF(JSON.stringify(obj));
 }
