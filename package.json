@@ -12,6 +12,7 @@
 	},
 	"license":"UNLICENSED",
 	"main":"index",
+	"scripts": { "start": "node index.js" },
 	"file":[
 		"index.js","client.html","node_modules"
 	],
