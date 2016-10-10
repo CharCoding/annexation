@@ -1,0 +1,23 @@
+{
+	"name":"annexation",
+	"version":"0.0.1",
+	"description":"A game of world domination",
+	"keywords":[
+		"world","domination","annex","conquer","multiplayer"
+	],
+	"homepage":"http://annexation.herokuapp.com",
+	"bugs":{
+		"url":"https://github.com/CharCoding/annexation/issues",
+		"email":"st-011510@aas.ru"
+	},
+	"license":"UNLICENSED",
+	"main":"server",
+	"file":[
+		"server.js","client.html"
+	],
+	"repository":{
+    "type":"git",
+    "url":"https://github.com/CharCoding/annexation.git"
+  },
+  "dependencies" : { "websocket": ">=1.0.22" }
+}
