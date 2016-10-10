@@ -11,9 +11,9 @@
 		"email":"st-011510@aas.ru"
 	},
 	"license":"UNLICENSED",
-	"main":"server",
+	"main":"index",
 	"file":[
-		"server.js","client.html"
+		"index.js","client.html","node_modules"
 	],
 	"repository":{
     "type":"git",
