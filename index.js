@@ -1,6 +1,6 @@
 "use strict";
 process.title = "The Ultimate Chat";
-var wsPort = new Date().getFullYear(),
+var wsPort = 80,
 	wsServer = require('websocket').server,
 	http = require('http'),
 	fs = require('fs'),
@@ -14,7 +14,7 @@ var wsPort = new Date().getFullYear(),
 
 var wsHttpServer = http.createServer(function(req,res){
 	fs.readFile("client.html",function(err,data){
-		if(err){res.writeHead(500);res.end();}
+		if(err){console.log("Error serving client.html");res.writeHead(500);res.end();}
 		res.writeHead(200,{"Content-Type":"text/html"});
 		res.end(data);
 	});
@@ -199,3 +199,4 @@ function time(obj){
 function send(con,obj){
 	con.sendUTF(JSON.stringify(obj));
 }
+console.log("Reached end of index.js");
